@@ -1,0 +1,370 @@
+openapi: 3.0.2
+info:
+  title: EIC MVP API
+  version: 0.0.1
+  description: |
+    # Описание
+    “EIC MVP API” — это REST API, 
+    предназначенный для управления информацией о домах и квартирах, 
+    а также для расчета стоимости коммунальных услуг. 
+    API предоставляет функции для получения списка домов, 
+    подробной информации о конкретных домах и квартирах, 
+    записи показаний счетчиков воды и расчета стоимости коммунальных услуг.
+
+servers:
+  - url: http://127.0.0.1/api/v1/
+    description: Локальный сервер
+
+paths:
+  /houses/:
+    get:
+      summary: Список домов
+      operationId: listHouses
+      tags:
+        - Дома
+      responses:
+        '200':
+          description: Успешный запрос
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/House'
+
+  /houses/{id}/:
+    get:
+      summary: Получить информацию о доме
+      operationId: retrieveHouse
+      tags:
+        - Дома
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успешный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HouseDetail'
+        '404':
+          description: Дом не найден
+
+  /apartments/:
+    get:
+      summary: Список квартир
+      operationId: listApartments
+      tags:
+        - Квартиры
+      responses:
+        '200':
+          description: Успешный запрос
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Apartment'
+
+  /apartment_detail/:
+    get:
+      summary: Получить информацию о квартире
+      operationId: getApartmentDetail
+      tags:
+        - Квартиры
+      parameters:
+        - name: city
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: street
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: house_number
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: apartment_number
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успешный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApartmentDetail'
+        '400':
+          description: Неверный запрос
+        '404':
+          description: Квартира или дом не найдены
+
+    post:
+      summary: Записать показания счётчиков
+      operationId: postApartmentDetail
+      tags:
+        - Квартиры
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                readings:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      meter_id:
+                        type: integer
+                      value:
+                        type: number
+                        format: float
+              required:
+                - readings
+      responses:
+        '201':
+          description: Показания успешно записаны
+        '400':
+          description: Неверный запрос
+
+  /calculate_bills/{house_id}/:
+    post:
+      summary: Рассчитать стоимость услуг для дома
+      operationId: calculateHouseBills
+      tags:
+        - Расчёты
+      parameters:
+        - name: house_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date:
+                  type: string
+                  format: date
+                  example: '2024-07-19'
+              required:
+                - date
+      responses:
+        '200':
+          description: Успешный запрос
+        '400':
+          description: Неверный запрос
+        '404':
+          description: Дом не найден
+
+    get:
+      summary: Получить расчет стоимости услуг для дома
+      operationId: getHouseBills
+      tags:
+        - Расчёты
+      parameters:
+        - name: house_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+            example: '2024-07-19'
+      responses:
+        '200':
+          description: Успешный запрос
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  house:
+                    $ref: '#/components/schemas/House'
+                  apartment:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CalculationResultDetail'
+        '400':
+          description: Неверный запрос
+        '404':
+          description: Дом не найден
+
+components:
+  schemas:
+    House:
+      type: object
+      properties:
+        id:
+          type: integer
+        city:
+          type: string
+        street:
+          type: string
+        house_number:
+          type: integer
+      required:
+        - id
+        - city
+        - street
+        - house_number
+
+    HouseDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        city:
+          type: string
+        street:
+          type: string
+        house_number:
+          type: integer
+        apartments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApartmentDetail'
+      required:
+        - id
+        - city
+        - street
+        - house_number
+        - apartments
+
+    Apartment:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: integer
+        area:
+          type: number
+          format: float
+        house:
+          type: integer
+        water_meters:
+          type: array
+          items:
+            $ref: '#/components/schemas/WaterMeter'
+      required:
+        - id
+        - number
+        - area
+        - house
+        - water_meters
+
+    ApartmentDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: integer
+        area:
+          type: number
+          format: float
+        house:
+          type: integer
+        water_meters:
+          type: array
+          items:
+            $ref: '#/components/schemas/WaterMeter'
+      required:
+        - id
+        - number
+        - area
+        - house
+        - water_meters
+
+    WaterMeter:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        serial_number:
+          type: integer
+        apartment:
+          type: integer
+        readings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reading'
+      required:
+        - id
+        - name
+        - serial_number
+        - apartment
+        - readings
+
+    Reading:
+      type: object
+      properties:
+        id:
+          type: integer
+        reading_date:
+          type: string
+          format: date
+        value:
+          type: number
+          format: float
+        water_meter:
+          type: integer
+      required:
+        - id
+        - reading_date
+        - value
+        - water_meter
+
+    CalculationResultDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        month:
+          type: string
+          format: date
+        apartment:
+          type: object
+          properties:
+            id:
+              type: integer
+            number:
+              type: integer
+        water_cost:
+          type: number
+          format: float
+        maintenance_cost:
+          type: number
+          format: float
+        total_cost:
+          type: number
+          format: float
+      required:
+        - id
+        - month
+        - apartment
+        - water_cost
+        - maintenance_cost
+        - total_cost
