@@ -1,4 +1,4 @@
-# House and Apartment API
+# EIC MVP API
 
 ## Описание
 
